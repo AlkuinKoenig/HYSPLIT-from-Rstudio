@@ -1,0 +1,266 @@
+---
+title: "plotting examples"
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+---
+
+A few examples for some HYSPLIT-based plots.
+
+user input. Where are the HYSPLIT files found?
+```{r}
+path_to_files = paste0(here::here(),"/batch_results/Ex3_MaceHead_matrix/")
+```
+
+
+libraries & utils
+```{r, warning=FALSE, message=FALSE}
+library(dplyr) #crunching
+library(tidyr) #crunching
+library(ggplot2) #best plotting library
+library(patchwork) #nice library for multipanel plots
+library(maps) # for a worldmap
+library(here) #for relative paths
+library(circular) # for polar coordinates
+library(data.table) #because rbindlist is an amazing function
+
+#utility function to get lower and upper limits of binned variables (bins obtained with the "cut" function)
+get_interval_bounds = function (x, name_prefix = "")
+{
+  lim_inferior = gsub("\\(", "", x)
+  lim_inferior = gsub("\\[", "", lim_inferior)
+  lim_inferior = gsub(",.*", "", lim_inferior)
+  lim_inferior = as.numeric(lim_inferior)
+
+  lim_superior = gsub(".*,", "", x)
+  lim_superior = gsub("\\]", "", lim_superior)
+  lim_superior = as.numeric(lim_superior)
+
+  outframe = data.frame(inf = lim_inferior, sup = lim_superior)
+  if (name_prefix != ""){names(outframe) = paste0(name_prefix,"_",names(outframe))}
+  return(outframe)
+}
+
+#utility function to calculate polar (cylindrical) coordinates for trajectory endpoints
+get_polar_coords_geographical = function(lat,lon,latcenter,loncenter){
+  lat_to_cent=lat-latcenter
+
+  lon_to_cent_1= ((lon-loncenter) %% 360) - 360
+  lon_to_cent_2= (((lon-loncenter) %% 360) - 360) %%360
+  lon_to_cent = ifelse(abs(lon_to_cent_1) < abs(lon_to_cent_2), lon_to_cent_1, lon_to_cent_2)
+
+  angle_deg=coord2rad(lat_to_cent,lon_to_cent,control.circular = list(type="angles", units = "degrees",modulo="2pi", zero=0))
+  radius=sqrt((lat_to_cent^2+lon_to_cent^2))
+
+  return(data.frame(radius = radius, angle=angle_deg))
+}
+
+#some world maps
+world_with_borders = map_data("world")
+#world_without_borders = readRDS(paste0(here::here(),"/miscellaneous/worldmap_continents.rds")) #a worldmap without country borders that I've created
+```
+
+Data import
+```{r}
+filenames = list.files(path=path_to_files,pattern = ".rds", full.names=TRUE) #getting the full path to all the files to be imported
+
+HYS_df = data.table::rbindlist(lapply(filenames, readRDS))%>%
+  dplyr::mutate(ID = paste0(lat_i, lon_i, height_i, as.character(traj_dt_i)))%>%
+  dplyr::mutate(get_polar_coords_geographical(lat,lon,lat_i,lon_i))# adding polar coordinates for later plots
+
+emission_points = HYS_df %>% dplyr::select(lat_i, lon_i, height_i)%>%unique()
+```
+
+Let's do a simple "trajectory plot"
+```{r, fig.asp = 0.5}
+ggplot(data=HYS_df, aes(x=lon, y = lat, colour = height, group=ID))+
+  geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+  geom_path()+
+  geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+  geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+  scale_colour_viridis_c(option = "C", direction = 1, begin=0.1, end=1)+
+  coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+  labs(colour = "height\n[magl]")+
+  theme_bw()
+```
+
+To avoid overplotting, we can also calculate and plot a "footprint"
+```{r,fig.asp=0.5}
+HYS_df.s = HYS_df %>%
+  dplyr::mutate(lon_bin = cut(lon, seq(-360,360,1)),
+                lat_bin = cut(lat, seq(-90,90,1)))%>%
+  dplyr::group_by(lon_bin, lat_bin)%>%
+  dplyr::summarise(endpoint_sum = sum(!is.na(lon)), .groups="drop")%>%
+  dplyr::mutate(endpoint_sum_norm = endpoint_sum/max(.$endpoint_sum))%>%
+  dplyr::mutate(get_interval_bounds(lon_bin,"lon"),
+                get_interval_bounds(lat_bin,"lat"))
+
+
+ggplot(data=HYS_df.s)+
+  geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+  geom_rect(aes(xmin = lon_inf, xmax = lon_sup, ymin = lat_inf, ymax=lat_sup, fill = endpoint_sum_norm), alpha = 1)+
+ #geom_path(data=HYS_df, aes(x=lon, y = lat, group = ID), alpha = 0.2, colour="black")+
+  #geom_rect(aes(xmin = lon_inf, xmax = lon_sup, ymin = lat_inf, ymax=lat_sup, fill = endpoint_sum_norm), alpha = 0.3)+
+  geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+  geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+  scale_fill_viridis_c(trans="log10")+
+  coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+  labs(fill = "normalized\nresidence\ntime", x= "lon", y = "lat")+
+  theme_bw()
+```
+
+
+
+We can also calculate and plot the footprint in logpolar coordinates, which I like a lot because polar coordinates come natural to back trajectories. This requires a few additional transformations. Plotting this way sometimes makes a lot of sense, sometimes it doesn't. For you to decide!
+```{r, warning = FALSE, message = FALSE}
+
+
+#radius_bins =  1.3**seq(0,20,0.5) -1
+#radius_bins =  1.2**seq(0,30,0.5) -1
+radius_bins =  sqrt(2)**seq(0,30,0.33) - 1
+angle_bins = seq(0,360,7.5)
+
+latcenter_polar = mean(HYS_df$lat_i) #latitude of center of polar grid. I'm taking the mean, because if you have a matrix of emission points, you might want to have the center of the matrix as origin for the polar grid
+loncenter_polar = mean(HYS_df$lon_i) #same as above but for longitude
+
+HYS_df.s2 = HYS_df %>%
+  dplyr::mutate(get_polar_coords_geographical(lat,lon,latcenter_polar,loncenter_polar))%>%
+  dplyr::mutate(angle_bin = cut(angle, angle_bins, include.lowest=TRUE),
+                radius_bin = cut(radius, radius_bins, include.lowest=TRUE))%>%
+  dplyr::group_by(angle_bin, radius_bin)%>%
+  dplyr::summarise(endpoint_sum = sum(!is.na(lon)), 
+                   sum_unique = length(unique(ID)),
+                   .groups="drop")%>%
+  dplyr::mutate(endpoint_sum_norm = endpoint_sum/max(.$endpoint_sum))%>%
+  dplyr::mutate(get_interval_bounds(angle_bin,"angle"),
+                get_interval_bounds(radius_bin,"radius"))%>%
+  dplyr::group_by(radius_bin)%>%
+  dplyr::mutate(endpoint_sum_ringwise_norm = endpoint_sum/max(endpoint_sum))%>%
+  dplyr::ungroup()
+
+#I now create a very fine lat-lon grid and recombine it with the dataframe above. This way, we achieve to "pixelize" the polar coordinates! This is convenient for plotting. 
+#Note that you can control the coarseness of the pixels by adapting the latitude and longitude vectors in expand.grid. Care though, the finer the grid, the more computational effort!
+HYS_df.s2_pixelized = expand.grid(lat = seq(-90,90,0.05),lon = seq(-180,180,0.05))%>%
+  dplyr::mutate(get_polar_coords_geographical(lat,lon,latcenter_polar,loncenter_polar))%>%
+  dplyr::mutate(angle_bin = cut(angle, angle_bins, include.lowest=TRUE),
+                radius_bin = cut(radius, radius_bins, include.lowest=TRUE))%>%
+  dplyr::full_join(HYS_df.s2 %>% dplyr::select(!one_of("radius_inf","radius_sup")))%>%
+  dplyr::filter(!is.na(endpoint_sum)) #no need to maintain pixels for which no trajectory information is available!
+```
+
+
+```{r, warning = FALSE, message = FALSE}
+#and the plot
+ggplot(data=HYS_df.s2_pixelized, aes(x=lon, y= lat, fill=endpoint_sum_norm))+
+  geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+  geom_raster()+
+  geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+  geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+  scale_fill_viridis_c(trans="log10",na.value="transparent")+
+  coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+  labs(fill = "normalized\nresidence\ntime", x= "lon", y = "lat")+
+  theme_bw()
+
+# #and the plot
+# ggplot(data=HYS_df.s2_pixelized, aes(x=lon, y= lat, fill=endpoint_sum_ringwise_norm))+
+#   geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+#   geom_raster()+
+#   geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+#   geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+#   scale_fill_viridis_c(trans="log10",na.value="transparent")+
+#   coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+#   labs(fill = "normalized\nresidence\ntime", x= "lon", y = "lat")+
+#   theme_bw()
+```
+
+
+We could also add individual trajectories to this plot. This allows us to evalute which cells are not really "significant", because results are only based on a few unique trajectories. I increase the transparency close to the emission point, so that the trajectories converging there don't cover all the cell colors. Note that plotting paths with different alpha values is computationally quite expensive - meaning that if you have many trajectories, this may take forever. Also, depending on how many trajectories you have, you might want to adjust the range of "scale_alpha_continuous".
+```{r, warning = FALSE, message = FALSE}
+#and the plot
+ggplot(data=HYS_df.s2_pixelized, aes(x=lon, y= lat, fill=endpoint_sum_norm))+
+  geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+  geom_raster()+
+  geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+  geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+  geom_path(data=subset(HYS_df), aes(x=lon, y = lat, group = ID, alpha = radius), colour = "red", 
+            linewidth = 0.3,  inherit.aes=FALSE, show.legend = FALSE)+
+  scale_alpha_continuous(range = c(0.1,0.6))+
+  scale_fill_viridis_c(trans="log10",na.value="transparent")+
+  coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+  labs(fill = "normalized\nresidence\ntime", x= "lon", y = "lat")+
+  theme_bw()
+
+# #and the plot
+# ggplot(data=HYS_df.s2_pixelized, aes(x=lon, y= lat, fill=endpoint_sum_ringwise_norm))+♦
+#   geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+#   geom_raster()+
+#   geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+#   geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+#   scale_fill_viridis_c(trans="log10",na.value="transparent")+
+#   coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+#   labs(fill = "normalized\nresidence\ntime", x= "lon", y = "lat")+
+#   theme_bw()
+```
+
+
+Or we add some sort of hash to mark cells that are based on few individual trajectories
+```{r, warning = FALSE, message = FALSE}
+#and the plot
+ggplot(data=HYS_df.s2_pixelized, aes(x=lon, y= lat, fill=endpoint_sum_norm))+
+  geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+  geom_raster()+
+  geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+  geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+  geom_point(data=subset(HYS_df.s2_pixelized, sum_unique <5 & lon%%0.5 == 0 & lat %% 0.5 == 0), aes(x=lon, y = lat), colour = "white",
+            size=0.1,  inherit.aes=FALSE, show.legend = FALSE)+
+  scale_alpha_continuous(range = c(0.05,0.6))+
+  scale_fill_viridis_c(trans="log10",na.value="transparent")+
+  coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+  labs(fill = "normalized\nresidence\ntime", x= "lon", y = "lat", caption = "white dotted cells are traversed by less than 5 individual trajectories")+
+  theme_bw()
+
+# #and the plot
+# ggplot(data=HYS_df.s2_pixelized, aes(x=lon, y= lat, fill=endpoint_sum_ringwise_norm))+
+#   geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+#   geom_raster()+
+#   geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+#   geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+#   scale_fill_viridis_c(trans="log10",na.value="transparent")+
+#   coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+#   labs(fill = "normalized\nresidence\ntime", x= "lon", y = "lat")+
+#   theme_bw()
+```
+
+
+
+
+Note how the logpolar grid allows us to plot in non-logaritmic coordinates, without the plot being dominated by cells close to the origin...this is not true if we do the gridding on a regular lat/lon grid. 
+```{r, fig.asp=1}
+p1 =ggplot(data=HYS_df.s)+
+  geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+  geom_rect(aes(xmin = lon_inf, xmax = lon_sup, ymin = lat_inf, ymax=lat_sup, fill = endpoint_sum_norm), alpha = 1)+
+ #geom_path(data=HYS_df, aes(x=lon, y = lat, group = ID), alpha = 0.2, colour="black")+
+  #geom_rect(aes(xmin = lon_inf, xmax = lon_sup, ymin = lat_inf, ymax=lat_sup, fill = endpoint_sum_norm), alpha = 0.3)+
+  geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+  geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+  scale_fill_viridis_c(trans="identity", begin = 0.2, end =1)+
+  coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+  labs(fill = "normalized\nresidence\ntime", x= "lon", y = "lat", title = "regular lat/lon grid - linear color scale")+
+  theme_bw()
+
+p2 = ggplot(data=HYS_df.s2_pixelized, aes(x=lon, y= lat, fill=endpoint_sum_norm))+
+  geom_polygon(data = world_with_borders, aes(x=long, y=lat, group=group), color='transparent', fill="gray", inherit.aes=FALSE)+
+  geom_raster()+
+  geom_path(data = world_with_borders, aes(x=long, y=lat, group=group), color='black', linewidth=0.7, inherit.aes=FALSE)+
+  geom_point(data=emission_points, aes(x=lon_i, y = lat_i), colour="red", inherit.aes=FALSE)+
+  scale_fill_viridis_c(trans="identity",na.value="transparent", begin = 0.2, end=1)+
+  coord_fixed(xlim = quantile(HYS_df$lon, c(0,1)), ylim = quantile(HYS_df$lat, c(0,1)))+
+  labs(fill = "normalized\nresidence\ntime", x= "lon", y = "lat", title = "logpolar grid - linear color scale")+
+  theme_bw()
+
+p1 / p2
+```
+
+
+
