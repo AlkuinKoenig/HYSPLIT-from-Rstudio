@@ -50,9 +50,9 @@ if (myerror != "no error"){message(paste0("ERROR: ", myerror," ... aborting"))
         clean_up = TRUE
       )
     filename = paste(job_data_table$met_type[i], job_data_table$run_duration[i], job_data_table$lat[i], job_data_table$lon[i], job_data_table$starting_height[i],
-                     "XXX", job_data_table$days_to_run[i],"XXX", paste(job_data_table$run_duration[i],collapse=""),"YYY",
+                     "X", job_data_table$days_to_run[i],"X", paste(job_data_table$run_duration[i],collapse=""),"Y",
                      paste(job_data_table$starting_hours[[i]], collapse = ""),
-                     job_data_table$extended_met[i], currentjob, sep = "_")
+                     substr(as.character(job_data_table$extended_met[i]),1,1), currentjob, sep = "_")
     
     trajectory = add_metadata_attributes(trajectory, job_data_table$run_direction[i], job_data_table$extended_met[i], job_data_table$starting_height[i], job_data_table$met_type[i])
     

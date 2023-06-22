@@ -7,7 +7,7 @@ library(rstudioapi) #for job controls -> parallel processing
 library(here) #neat relative paths
 
 ######## USER INPUT ###############
-job_metdir = paste0(here::here(),"/meteo_input_examples/met_ncar_ncep") #this is the directory where the meteo-input files are found.
+job_metdir = paste0(here::here(),"/meteo_input/met_ncar_ncep") #this is the directory where the meteo-input files are found.
 batch_savedir = paste0(here::here(),"/batch_results/Ex1_AMS") #This is the directory where the results are saved.
 job_workdir = paste0(here::here(),"/job_workdir") #this is the directory where the jobs will be "working". 
 

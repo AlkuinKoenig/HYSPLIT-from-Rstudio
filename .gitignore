@@ -1,0 +1,8 @@
+batch_results/*
+!batch_results/.gitkeep
+meteo_input/*
+!meteo_input/.gitkeep
+job_workdir/*
+!job_workdir/.gitkeep
+.Rproj.user*
+.Rproj.user
