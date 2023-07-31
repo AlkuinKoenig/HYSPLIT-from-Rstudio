@@ -69,7 +69,7 @@ indexlist = split(sample(1:nrow(control_datatable)), sort((1:nrow(control_datata
 # Each job will "call" the main calculation script, which is given in the "workingscript_path" variable. 
 
 workingscript_path = "./scripts/localjob_datatable_run.R"
-jobs = 1:jobnumber %>% as.character()%>%paste0("job",.)
+jobs = 1:jobnumber %>% as.character()%>%paste0("j",.)
 
 #launch all the jobs.
 for (i in 1:jobnumber){

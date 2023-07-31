@@ -29,7 +29,7 @@ if (myerror != "no error"){message(paste0("ERROR: ", myerror," ... aborting"))
     message(paste0("Calculating day ", i,"/", nrow(job_data_table),": ", job_data_table$days_to_run[i]," at starting hours: ", paste(job_data_table$starting_hours[[i]], collapse=",")))
     
     #creating a new working directory from scratch on every run. The reason is to avoid one error making whole batch get "stuck"
-    temp_workdir = paste0(job_workdir, "/", paste0(currentjob, "-row",i))
+    temp_workdir = paste0(job_workdir, "/", currentjob)# paste0(currentjob, "-row",i))
     unlink(temp_workdir, recursive = TRUE)
     dir.create(temp_workdir, showWarnings = FALSE)
     
