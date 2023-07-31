@@ -1,0 +1,20 @@
+utils::globalVariables(
+  c(
+    ".",
+    "available",
+    "date2",
+    "date_str",
+    "date_h_str",
+    "height",
+    "hour.inc",
+    "hour_along",
+    "lat",
+    "lon",
+    "particle_i",
+    "receptor",
+    "run",
+    "traj_dt",
+    "traj_dt_i",
+    "year_full"
+  )
+)
