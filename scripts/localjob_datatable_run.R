@@ -1,5 +1,7 @@
 #This is the main script that each of the individual jobs will run
 
+library(splitr.bugfix) #HYSPLIT interface
+
 #handling of common errors
 myerror = dplyr::case_when(!(output_filetype %in% c("rds","csv")) ~ paste0(output_filetype, " is not an accepted type for output data output data"),
                            !dir.exists(job_metdir) ~ paste0("meteo input directory ", job_metdir," doesn't exist"),
@@ -34,7 +36,7 @@ if (myerror != "no error"){message(paste0("ERROR: ", myerror," ... aborting"))
     dir.create(temp_workdir, showWarnings = FALSE)
     
     trajectory<-
-      splitr::hysplit_trajectory(
+      hysplit_trajectory(
         lat = job_data_table$lat[i],
         lon = job_data_table$lon[i],
         height = job_data_table$starting_height[i],

@@ -1,3 +1,5 @@
+library(splitr.bugfix) #HYSPLIT interface
+
 #This script allows you to download the meteorological input for your runs (by leveraging a function that is already included in splitR). 
 #Before doing any runs with parallel-processing, you should make sure to have all meteo files already available. 
 #The script will download the files only when they are not already in the folder you specify
@@ -27,7 +29,7 @@ dir.create(meteo_output_dir)
 
 system.time(
   trajectory <-
-    splitr::hysplit_trajectory(
+    hysplit_trajectory(
       lat = -16.35023,
       lon = -68.13143,
       height = 2300,
