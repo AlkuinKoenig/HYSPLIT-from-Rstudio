@@ -1,3 +1,4 @@
+library(splitr.bugfix) #HYSPLIT interface
 library(lubridate) #date time sequences
 library(data.table) #crunching
 library(dplyr) #crunching
