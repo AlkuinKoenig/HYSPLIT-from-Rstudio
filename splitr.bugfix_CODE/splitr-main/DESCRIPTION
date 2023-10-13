@@ -1,6 +1,6 @@
 Type: Package
 Package: splitr.bugfix
-Version: 0.4.0.9000
+Version: 0.5
 Title: Use the HYSPLIT model from inside R
 Description: Use the HYSPLIT model from inside R. Access data, set up trajectory
     and dispersion models, execute the model runs, and obtain on-disk and
@@ -8,7 +8,9 @@ Description: Use the HYSPLIT model from inside R. Access data, set up trajectory
     Comment Alkuin Koenig: <<I Changed several functions slightly to be more generous in the selection of needed meteorological files.
     This is to fix some bugs that I encountered concerning meteo files in gap years (eg. 29.02.2012), as well as a bug
     that I encountered when trying to compute back trajectories with starting hours of 22:00 or 23:00, when the day corresponds to the last day
-    of the meterological file. The functions that were changed are: get_monthly_filenames and get_daily_filenames in utils.R, as well as get_met_gdas1.R
+    of the meterological file. The functions that were changed are: get_monthly_filenames and get_daily_filenames in utils.R, as well as get_met_gdas1.R.
+    \
+    UPDATE: AMK 2023/10/13 . I also had to update the trajectory_read function, to make it compatible with latest HYSPLIT releases. 
     >>
 Authors@R:
     person("Richard", "Iannone", , "rich@rstudio.com", c("aut", "cre"),

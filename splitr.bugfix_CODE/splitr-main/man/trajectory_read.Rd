@@ -17,6 +17,9 @@ A tibble with HYSPLIT trajectory data.
 The function takes HYSPLIT trajectory output files in a specified output
 directory and processes all files into a data frame object.
 }
+\details{
+Modified by AMK the 2023/10/13 for compatibility with newest HYSPLIT versions.
+}
 \examples{
 \dontrun{
 # Process all trajectory output files in the
