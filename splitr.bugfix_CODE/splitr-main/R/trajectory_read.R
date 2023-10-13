@@ -92,22 +92,22 @@ trajectory_read <- function(output_folder) {
     
     #we can drop those columns that we know are "empty"
     separator_columns = c(1,2,7,8)
-    traj.tibble = traj.matrix[, setdiff(1:sum(total_entries_per_line), separator_columns)] %>% as_tibble(.name_repair = "minimal")
+    traj.df = traj.matrix[, setdiff(1:sum(total_entries_per_line), separator_columns)] %>% as.data.frame()
     
     #now setting the right amount of row names, depending on whether we are using extended meteo or not. 
     data_entries_per_line = sum(total_entries_per_line) - length(separator_columns)
     
     if (data_entries_per_line == 9){
-      names(traj.tibble) = standard_col_names
+      names(traj.df) = standard_col_names
     } else if (data_entries_per_line == 18){
-      names(traj.tibble) = extended_col_names
+      names(traj.df) = extended_col_names
     } else {
       warning(paste0("I expected either 9 (standard output) or 18 (extended meteo output) different entries per trajectory, but I found ",data_entries_per_line, "! 
                      I'll probably crash now. Bye!" ))
     }
     
     #final massaging and done
-    traj.tibble=traj.tibble%>%
+    traj.df=traj.df%>%
       dplyr::mutate(year_full = ifelse(year < 50, year + 2000, year + 1900)) %>%
       tidyr::unite(col = date_str, year_full, month, day, sep = "-", remove = FALSE) %>%
       tidyr::unite(col = date_h_str, date_str, hour, sep = " ", remove = FALSE) %>%
@@ -115,7 +115,7 @@ trajectory_read <- function(output_folder) {
       dplyr::select(-c(date_h_str, date_str, year_full)) %>%
       dplyr::mutate(traj_dt_i = traj_dt[1])
     
-    traj_tbl <- traj_tbl %>% dplyr::bind_rows(traj.tibble)
+    traj_tbl <- traj_tbl %>% dplyr::bind_rows(traj.df)
   }
   
   traj_tbl

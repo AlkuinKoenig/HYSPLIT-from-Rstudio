@@ -11,6 +11,11 @@ myerror = dplyr::case_when(!(output_filetype %in% c("rds","csv")) ~ paste0(outpu
                            1==1 ~ "no error"
 )
 
+if (!exists("cleanup")){
+  warning("Cleanup flag has not been defined. Setting this to TRUE (default)")
+  cleanup=TRUE
+}
+
 #a function to add some metadata as attributes. Will only be helpful if you chose "rds" as output.
 add_metadata_attributes = function(data,
                                    run_direction = NULL,
@@ -49,7 +54,7 @@ if (myerror != "no error"){message(paste0("ERROR: ", myerror," ... aborting"))
         exec_dir = temp_workdir,
         met_dir = job_metdir, #passed to the job from global environment
         config = job_config,#passed to the job from global environment
-        clean_up = TRUE
+        clean_up = cleanup
       )
     
     

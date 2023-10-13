@@ -11,6 +11,9 @@ job_metdir = paste0(here::here(),"/meteo_input/met_ncar_ncep") #this is the dire
 batch_savedir = paste0(here::here(),"/batch_results/Ex1_AMS") #This is the directory where the results are saved.
 job_workdir = paste0(here::here(),"/job_workdir") #this is the directory where the jobs will be "working". 
 
+#path to the hysplit binary (hyts_std.exe in windows) that you want to use. This must end with an "/"!
+hysplit_binary_path = paste0(here::here(), "/splitr.bugfix_CODE/splitr-main/extras/win/") 
+
 output_filetype = "rds" #filetype of final HYSPLIT output. Either "rds" or "csv" 
 
 jobnumber = 4 #this gives the number of jobs, and thus the number of paralell processes. 
@@ -37,6 +40,7 @@ control_datatable = expand.grid(lon = c(77.56667),
                                 starting_height=c(50),
                                 days_to_run = seq.Date(as.Date("2016-07-09"), as.Date("2016-07-12"), by = "1 day")) %>%
   dplyr::mutate(met_type = "reanalysis", #the meteo input. Make sure that job_metdir points to the right direction!
+                binary_path = hysplit_binary_path, #path to the HYSPLIT executable
                 run_direction = "backward",
                 extended_met = FALSE,
                 run_duration = 4*24, #in hours
@@ -72,6 +76,8 @@ indexlist = split(sample(1:nrow(control_datatable)), sort((1:nrow(control_datata
 
 workingscript_path = "./scripts/localjob_datatable_run.R"
 jobs = 1:jobnumber %>% as.character()%>%paste0("j",.)
+
+cleanup = TRUE # should the working directory be cleaned up after calculation? This is recommended, but it may be turned off for debugging
 
 #launch all the jobs.
 for (i in 1:jobnumber){
