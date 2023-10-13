@@ -9,3 +9,6 @@ The issues could be fixed by being more generous with the meterological files th
 
 all changes made to the original library are marked with comments starting with "AK"
 
+
+UPDATE: 2023/10/13:
+I encountered problems with the original splitr.bugfix (and splitr) libraries when using a newer version of HYSPLIT (5.21). This was related to the function trajectory_read. I adapted the function accordingly. 
