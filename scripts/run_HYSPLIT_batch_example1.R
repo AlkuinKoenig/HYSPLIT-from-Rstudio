@@ -11,7 +11,8 @@ job_metdir = paste0(here::here(),"/meteo_input/met_ncar_ncep") #this is the dire
 batch_savedir = paste0(here::here(),"/batch_results/Ex1_AMS") #This is the directory where the results are saved.
 job_workdir = paste0(here::here(),"/job_workdir") #this is the directory where the jobs will be "working". 
 
-#path to the hysplit binary (hyts_std.exe in windows) that you want to use. This must end with an "/"!
+#path to the hysplit binary (hyts_std.exe in windows) that you want to use. Note that this should point to the right executable according to your 
+#operating system (windows, linux, mac...). This path MUST also end with an "/"!
 hysplit_binary_path = paste0(here::here(), "/splitr.bugfix_CODE/splitr-main/extras/win/") 
 
 output_filetype = "rds" #filetype of final HYSPLIT output. Either "rds" or "csv" 

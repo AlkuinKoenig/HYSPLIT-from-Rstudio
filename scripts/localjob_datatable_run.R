@@ -51,6 +51,7 @@ if (myerror != "no error"){message(paste0("ERROR: ", myerror," ... aborting"))
         direction = job_data_table$run_direction[i],
         met_type = job_data_table$met_type[i],
         extended_met = job_data_table$extended_met[i],
+        binary_path = job_data_table$binary_path[i],
         exec_dir = temp_workdir,
         met_dir = job_metdir, #passed to the job from global environment
         config = job_config,#passed to the job from global environment
@@ -74,7 +75,7 @@ if (myerror != "no error"){message(paste0("ERROR: ", myerror," ... aborting"))
                   col.names=TRUE, row.names=FALSE, sep = ",", dec = ".", quote=FALSE)
     }
     
-    unlink(temp_workdir, recursive=TRUE)#cleanup
+    if (cleanup){unlink(temp_workdir, recursive=TRUE)}#cleanup
   }#for
 }#else
 message(paste0("\n",currentjob, " finished"))

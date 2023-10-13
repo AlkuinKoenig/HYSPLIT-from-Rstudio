@@ -8,9 +8,11 @@ output:
 
 A few examples for some HYSPLIT-based plots.
 
-user input. Where are the HYSPLIT files found?
+user input. Where are the HYSPLIT files found? Comment out what you don't need
 ```{r}
-path_to_files = paste0(here::here(),"/batch_results/Ex3_MaceHead_matrix/")
+path_to_files = paste0(here::here(),"/batch_results/Ex1_AMS/")
+#path_to_files = paste0(here::here(),"/batch_results/Ex3_MaceHead_matrix/")
+#path_to_files = paste0(here::here(),"/batch_results/Ex3_MaceHead_matrix/")
 ```
 
 
