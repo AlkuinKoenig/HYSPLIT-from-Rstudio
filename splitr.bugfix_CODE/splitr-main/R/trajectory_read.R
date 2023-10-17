@@ -41,20 +41,22 @@ trajectory_read <- function(output_folder) {
       traj_dt = lubridate::as_datetime("2015-01-01")[-1],
       traj_dt_i = lubridate::as_datetime("2015-01-01")[-1]
     )
-  
-  extended_col_names <- 
-    c(
-      "year", "month", "day", "hour", "hour_along",
-      "lat", "lon", "height", "pressure",
-      "theta", "air_temp", "rainfall", "mixdepth", "rh", "sp_humidity", 
-      "h2o_mixrate", "terr_msl", "sun_flux"
-    )
-  
-  standard_col_names <- 
-    c(
-      "year", "month", "day", "hour", "hour_along",
-      "lat", "lon", "height", "pressure"
-    )
+  # 
+  # extended_col_names <- 
+  #   c(
+  #     "year", "month", "day", "hour", "hour_along",
+  #     "lat", "lon", "height", "pressure",
+  #     "theta", "air_temp", "rainfall", "mixdepth", "rh", "sp_humidity", 
+  #     "h2o_mixrate", "terr_msl", "sun_flux"
+  #   )
+  # 
+  # standard_col_names <- 
+  #   c(
+  #     "year", "month", "day", "hour", "hour_along",
+  #     "lat", "lon", "height", "pressure"
+  #   )
+  #these are the header lines that should always be present. These will be complemented with additional header entries if additional meteorological output is requested.
+  minimum_col_names = c("year", "month", "day", "hour", "hour_along", "lat", "lon", "height")
   
   # Process all trajectory files
   for (file_i in trajectory_file_list) {
@@ -74,12 +76,18 @@ trajectory_read <- function(output_folder) {
       ) %>%
       which()
     
+    #finding the entries corresponding to actual magnitudes
+    helpvec = file_lines[header_line] %>% strsplit(.," ") %>% unlist()
+    header_supplement=helpvec[nchar(helpvec)>2] %>% tolower()
+    traj_col_names = c(minimum_col_names, header_supplement)
+    
+    
     file_lines_data <- 
       file_lines[(header_line + 1):(length(file_lines))] %>%
       tidy_gsub("\\s\\s*", " ") %>%
       tidy_gsub("^ ", "")
     
-    #AMK making this compatible with newer versions. I'm going a different route here. Spllitting each line into elements
+    #AMK making this compatible with newer versions. I'm going a different route here. Splitting each line into elements
     file_lines_data = lapply(file_lines_data, function(x){strsplit(x," ")})
     
     #check if all lines have the same number of entries (through the variance of length). If that's not the case, there is a line break breaking a data line in 2
@@ -94,17 +102,18 @@ trajectory_read <- function(output_folder) {
     separator_columns = c(1,2,7,8)
     traj.df = traj.matrix[, setdiff(1:sum(total_entries_per_line), separator_columns)] %>% as.data.frame()
     
-    #now setting the right amount of row names, depending on whether we are using extended meteo or not. 
-    data_entries_per_line = sum(total_entries_per_line) - length(separator_columns)
-    
-    if (data_entries_per_line == 9){
-      names(traj.df) = standard_col_names
-    } else if (data_entries_per_line == 18){
-      names(traj.df) = extended_col_names
-    } else {
-      warning(paste0("I expected either 9 (standard output) or 18 (extended meteo output) different entries per trajectory, but I found ",data_entries_per_line, "! 
-                     I'll probably crash now. Bye!" ))
-    }
+    # #now setting the right amount of row names, depending on whether we are using extended meteo or not. 
+    # data_entries_per_line = sum(total_entries_per_line) - length(separator_columns)
+    #setting column names
+    names(traj.df) = traj_col_names    
+    # if (data_entries_per_line == 9){
+    #   names(traj.df) = standard_col_names
+    # } else if (data_entries_per_line == 18){
+    #   names(traj.df) = extended_col_names
+    # } else {
+    #   warning(paste0("I expected either 9 (standard output) or 18 (extended meteo output) different entries per trajectory, but I found ",data_entries_per_line, "! 
+    #                  I'll probably crash now. Bye!" ))
+    # }
     
     #final massaging and done
     traj.df=traj.df%>%
